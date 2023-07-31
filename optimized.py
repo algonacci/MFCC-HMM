@@ -6,6 +6,7 @@ from pydub import AudioSegment
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import librosa.display
+import joblib
 
 
 def extract_mfcc_delta_delta(audio_signal, samplerate=16000):
@@ -17,12 +18,12 @@ def extract_mfcc_delta_delta(audio_signal, samplerate=16000):
 
 def train_hmm_model(data, n_components=3, n_iter=100):
     model = hmm.GaussianHMM(n_components=n_components,
-                            n_iter=n_iter, verbose=True)
+                            n_iter=n_iter, covariance_type='diag', verbose=True)
 
     # Prepare the lengths parameter: the length of each sequence
     lengths = [x.shape[1] for x in data]
 
-    # Concatenate all sequences along the time axis
+    # Concatenate all sequences along the time axis (axis=1)
     data_concatenated = np.concatenate(data, axis=1)
 
     # Transpose to fit the model
@@ -31,7 +32,7 @@ def train_hmm_model(data, n_components=3, n_iter=100):
 
 
 def hmm_predict(model, mfcc_features):
-    return model.score(mfcc_features)
+    return model.score(mfcc_features.T)  # Transpose the mfcc_features
 
 
 def combine_predictions(mfcc_prediction, hmm_prediction, threshold=0.0):
@@ -67,6 +68,7 @@ def load_data(dir_path):
 
 
 def plot_mfcc(mfcc_feature, class_name):
+    print(f"MFCC feature shape: {mfcc_feature.shape}")  # Debugging line
     plt.figure(figsize=(10, 4))
     librosa.display.specshow(mfcc_feature, x_axis='time')
     plt.colorbar()
@@ -90,8 +92,29 @@ if __name__ == '__main__':
         hmm_model = train_hmm_model(class_data)
         hmm_models[class_name] = hmm_model
 
-        # Plot average MFCC features for the current class
-        plot_mfcc(np.mean(np.concatenate(class_data), axis=0), class_name)
+        # Average the MFCC coefficients of each file independently along the time axis (frames)
+        averaged_class_data = [
+            np.mean(x, axis=1, keepdims=True) for x in class_data]
+
+        # Now we can concatenate them along the time axis (axis=1)
+        averaged_class_data_stacked = np.hstack(averaged_class_data)
+
+        # Save the trained HMM model
+        model_save_path = f"{class_name}_hmm_model.pkl"
+        joblib.dump(hmm_model, model_save_path)
+        print(
+            f"Trained HMM model for class '{class_name}' saved to {model_save_path}")
+
+        # Plot the average MFCC coefficients
+        plot_mfcc(averaged_class_data_stacked, class_name)
+
+    # Load the saved HMM models for predictions
+    loaded_hmm_models = {}
+    for class_name in class_names:
+        model_save_path = f"{class_name}_hmm_model.pkl"
+        loaded_hmm_models[class_name] = joblib.load(model_save_path)
+        print(
+            f"HMM model for class '{class_name}' loaded from {model_save_path}")
 
     # Predict with HMM models
     results = []
