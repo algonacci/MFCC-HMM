@@ -45,6 +45,6 @@ if __name__ == '__main__':
     class_names = ['Al-Fatihah', 'Al-Ikhlas']
     hmm_models = load_trained_models(class_names)
 
-    file_path = 'path/to/your/new_audio_file.wav'
+    file_path = 'Testing/(fix) Rakin - Al Ikhlas.mp3'
     predicted_class = predict_audio_class(file_path)
     print(f"Predicted class: {predicted_class}")
