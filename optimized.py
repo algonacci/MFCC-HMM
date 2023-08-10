@@ -16,7 +16,7 @@ def extract_mfcc_delta_delta(audio_signal, samplerate=16000):
     return np.vstack((mfcc_features, delta_features))
 
 
-def train_hmm_model(data, n_components=3, n_iter=100):
+def train_hmm_model(data, n_components=3, n_iter=1000):
     model = hmm.GaussianHMM(n_components=n_components,
                             n_iter=n_iter, covariance_type='diag', verbose=True)
 
